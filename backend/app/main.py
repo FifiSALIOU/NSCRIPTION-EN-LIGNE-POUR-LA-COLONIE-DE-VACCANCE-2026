@@ -5,7 +5,14 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from .database import get_db
-from .models import User, DemandeInscription, Enfant, DemandeStatut, UserRole
+from .models import (
+    User,
+    DemandeInscription,
+    Enfant,
+    DemandeStatut,
+    UserRole,
+    LienParenteEnum,
+)
 from .schemas import (
     UserCreate,
     UserRead,
@@ -218,7 +225,44 @@ def add_enfant_to_demande(
     if demande.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Cette demande n'appartient pas au parent connecté.")
 
-    # TODO: règles d'âge, titulaire unique, listes d'attente
+    # ----- Règle d'âge (condition inéluctable) -----
+    annee_naissance = enfant_in.date_naissance.year
+    if not (2012 <= annee_naissance <= 2019):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inscription rejetée : l'année de naissance doit être comprise entre 2012 et 2019.",
+        )
+
+    # ----- Règle titulaire -----
+    # On enlève la possibilité de choisir un autre titulaire :
+    # - si c'est le 1er enfant de la demande => titulaire
+    # - sinon => pas titulaire (suppléant)
+    nb_enfants_demande = (
+        db.query(Enfant)
+        .filter(Enfant.demande_id == demande.id)
+        .count()
+    )
+    est_titulaire = nb_enfants_demande == 0
+
+    # ----- Calcul de liste_attente -----
+    if est_titulaire:
+        liste_attente = 0  # liste principale
+    else:
+        if enfant_in.lien_parente == LienParenteEnum.AUTRE:
+            liste_attente = 2  # liste d'attente n°2
+        else:
+            liste_attente = 1  # liste d'attente n°1
+
+    # ----- Calcul de position_liste -----
+    nb_deja_dans_liste = (
+        db.query(Enfant)
+        .filter(
+            Enfant.demande_id == demande.id,
+            Enfant.liste_attente == liste_attente,
+        )
+        .count()
+    )
+    position_liste = nb_deja_dans_liste + 1
 
     enfant = Enfant(
         demande_id=demande.id,
@@ -227,8 +271,9 @@ def add_enfant_to_demande(
         date_naissance=enfant_in.date_naissance,
         sexe=enfant_in.sexe,
         lien_parente=enfant_in.lien_parente,
-        est_titulaire=enfant_in.est_titulaire,
-        liste_attente=0,
+        est_titulaire=est_titulaire,
+        liste_attente=liste_attente,
+        position_liste=position_liste,
     )
     db.add(enfant)
     db.commit()
