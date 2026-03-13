@@ -30,6 +30,22 @@ class UserRead(UserBase):
         from_attributes = True
 
 
+class AdminCreateUser(UserBase):
+    """
+    Schéma utilisé par l'ADMIN pour créer n'importe quel utilisateur
+    (parent, gestionnaire, admin).
+    """
+
+    password: str = Field(..., min_length=6, max_length=128)
+    role: UserRole
+
+
+class UserStatusUpdate(BaseModel):
+    """Schéma pour activer / désactiver un compte utilisateur."""
+
+    is_active: bool
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"

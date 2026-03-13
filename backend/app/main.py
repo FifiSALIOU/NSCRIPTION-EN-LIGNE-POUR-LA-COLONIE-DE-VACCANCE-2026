@@ -5,17 +5,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from .database import get_db
-from .models import (
-    User,
-    DemandeInscription,
-    Enfant,
-    DemandeStatut,
-    UserRole,
-    LienParenteEnum,
-)
+from .models import User, DemandeInscription, Enfant, DemandeStatut, UserRole, LienParenteEnum
 from .schemas import (
     UserCreate,
     UserRead,
+    AdminCreateUser,
+    UserStatusUpdate,
     Token,
     DemandeCreate,
     DemandeRead,
@@ -23,7 +18,7 @@ from .schemas import (
     EnfantRead,
 )
 from .security import hash_password, verify_password, create_access_token
-from .deps import get_current_user, require_parent, require_gestionnaire
+from .deps import get_current_user, require_parent, require_gestionnaire, require_admin
 
 
 app = FastAPI(
@@ -121,6 +116,83 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 
+# ---------- Admin : gestion des utilisateurs ----------
+
+
+@app.get("/admin/users", response_model=list[UserRead], tags=["admin"])
+def admin_list_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Liste tous les utilisateurs (parents, gestionnaires, admins).
+    Accès réservé à l'ADMIN.
+    """
+    return db.query(User).all()
+
+
+@app.post("/admin/users", response_model=UserRead, status_code=status.HTTP_201_CREATED, tags=["admin"])
+def admin_create_user(
+    user_in: AdminCreateUser,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Création d'un utilisateur par l'ADMIN (quel que soit le rôle).
+    - Vérifie l'unicité du matricule et de l'email.
+    """
+    existing_by_matricule = db.query(User).filter(User.matricule == user_in.matricule).first()
+    if existing_by_matricule:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un utilisateur avec ce matricule existe déjà.",
+        )
+
+    if user_in.email:
+        existing_by_email = db.query(User).filter(User.email == user_in.email).first()
+        if existing_by_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Un utilisateur avec cet email existe déjà.",
+            )
+
+    db_user = User(
+        matricule=user_in.matricule,
+        prenom=user_in.prenom,
+        nom=user_in.nom,
+        email=user_in.email,
+        service=user_in.service,
+        role=user_in.role,
+        password_hash=hash_password(user_in.password),
+        is_active=True,
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+@app.patch("/admin/users/{user_id}", response_model=UserRead, tags=["admin"])
+def admin_update_user_status(
+    user_id: int,
+    payload: UserStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Active ou désactive un compte utilisateur.
+    Accès réservé à l'ADMIN.
+    """
+    user = db.query(User).get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+    user.is_active = payload.is_active
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 # ---------- Demandes ----------
 
 
@@ -152,6 +224,60 @@ def list_demandes(
         q = q.filter(DemandeInscription.user_id == current_user.id)
     elif statut:
         q = q.filter(DemandeInscription.statut == statut)
+    return q.all()
+
+
+# ---------- Gestionnaire : vues spécialisées sur les demandes ----------
+
+
+@app.get("/gestionnaire/demandes/en_attente", response_model=list[DemandeRead], tags=["gestionnaire"])
+def gestionnaire_demandes_en_attente(
+    service: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_gestionnaire),
+):
+    """
+    Liste les demandes en attente.
+    Optionnellement filtrées par service du parent.
+    """
+    q = db.query(DemandeInscription).join(User, DemandeInscription.user_id == User.id)
+    q = q.filter(DemandeInscription.statut == DemandeStatut.EN_ATTENTE)
+    if service:
+        q = q.filter(User.service == service)
+    return q.all()
+
+
+@app.get("/gestionnaire/demandes/validees", response_model=list[DemandeRead], tags=["gestionnaire"])
+def gestionnaire_demandes_validees(
+    service: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_gestionnaire),
+):
+    """
+    Liste les demandes validées.
+    Optionnellement filtrées par service du parent.
+    """
+    q = db.query(DemandeInscription).join(User, DemandeInscription.user_id == User.id)
+    q = q.filter(DemandeInscription.statut == DemandeStatut.VALIDEE)
+    if service:
+        q = q.filter(User.service == service)
+    return q.all()
+
+
+@app.get("/gestionnaire/demandes/rejetees", response_model=list[DemandeRead], tags=["gestionnaire"])
+def gestionnaire_demandes_rejetees(
+    service: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_gestionnaire),
+):
+    """
+    Liste les demandes rejetées.
+    Optionnellement filtrées par service du parent.
+    """
+    q = db.query(DemandeInscription).join(User, DemandeInscription.user_id == User.id)
+    q = q.filter(DemandeInscription.statut == DemandeStatut.REJETEE)
+    if service:
+        q = q.filter(User.service == service)
     return q.all()
 
 
