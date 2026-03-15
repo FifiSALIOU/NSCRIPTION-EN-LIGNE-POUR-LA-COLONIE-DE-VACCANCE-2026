@@ -23,6 +23,9 @@ demo/**/target/
 demo/**/.mvn/
 demo/**/logs/
 
+# Dépendances frontend (ne pas versionner)
+**/node_modules/
+
 # Systèmes d'exploitation
 Thumbs.db
 Desktop.ini
