@@ -174,7 +174,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         {role === "parent" && renderMenuItems(parentItems, "Espace Parent")}
-        {role === "admin" && renderMenuItems(adminItems, "Administration")}
+        {role === "admin" && renderMenuItems(adminItems, "GESTIONNAIRE")}
         {role === "super_admin" && renderMenuItems(superAdminItems, "Super Administration")}
       </SidebarContent>
 
