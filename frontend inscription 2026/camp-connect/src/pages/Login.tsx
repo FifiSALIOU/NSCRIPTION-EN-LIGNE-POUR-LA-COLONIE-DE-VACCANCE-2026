@@ -88,21 +88,6 @@ const Login = () => {
             <Users className="w-5 h-5" />
             <span className="text-sm font-medium">Caisse de Sécurité Sociale</span>
           </motion.div>
-
-          {/* Test credentials */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.5 }}
-            className="mt-10 text-left bg-white/10 backdrop-blur-sm rounded-xl p-5"
-          >
-            <p className="text-sm font-semibold text-secondary mb-3">🔑 Comptes de test :</p>
-            <div className="space-y-2 text-xs text-primary-foreground/80">
-              <p><span className="text-secondary font-medium">Parent :</span> PARENT001 / Parent123!</p>
-              <p><span className="text-secondary font-medium">Admin :</span> ADMIN001 / Admin123!</p>
-              <p><span className="text-secondary font-medium">Super Admin :</span> SUPER001 / Super123!</p>
-            </div>
-          </motion.div>
         </div>
       </motion.div>
 
@@ -178,16 +163,6 @@ const Login = () => {
               )}
             </Button>
           </form>
-
-          {/* Mobile test credentials */}
-          <div className="lg:hidden mt-6 bg-muted rounded-lg p-4">
-            <p className="text-xs font-semibold text-secondary mb-2">🔑 Comptes de test :</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p><span className="font-medium">Parent :</span> PARENT001 / Parent123!</p>
-              <p><span className="font-medium">Admin :</span> ADMIN001 / Admin123!</p>
-              <p><span className="font-medium">Super Admin :</span> SUPER001 / Super123!</p>
-            </div>
-          </div>
 
           <div className="mt-8 text-center">
             <p className="text-sm text-muted-foreground">
