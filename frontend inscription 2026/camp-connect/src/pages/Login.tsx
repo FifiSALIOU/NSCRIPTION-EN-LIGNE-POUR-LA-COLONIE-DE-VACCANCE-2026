@@ -16,32 +16,30 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, users } = useAuth();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    setTimeout(() => {
-      const result = login(matricule, password);
-      setIsLoading(false);
-
+    try {
+      const result = await login(matricule, password);
       if (result.ok) {
         toast({ title: "Connexion réussie", description: result.message });
-        // Redirect based on role
-        const normalized = matricule.trim().toUpperCase();
-        const user = users.find((u) => u.matricule.toUpperCase() === normalized);
-        if (user?.role === "admin") {
-          navigate("/dashboard/admin");
-        } else if (user?.role === "super_admin") {
-          navigate("/dashboard/super-admin");
-        } else {
-          navigate("/dashboard");
-        }
+        // Laisser React mettre à jour le contexte (currentUser) avant la redirection,
+        // sinon RequireAuth voit encore isAuthenticated === false et renvoie vers /login.
+        const target =
+          result.role === "admin"
+            ? "/dashboard/admin"
+            : result.role === "super_admin"
+              ? "/dashboard/super-admin"
+              : "/dashboard";
+        setTimeout(() => navigate(target), 0);
       } else {
         toast({ title: "Erreur", description: result.message, variant: "destructive" });
       }
-    }, 600);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

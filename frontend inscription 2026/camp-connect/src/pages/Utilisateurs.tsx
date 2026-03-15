@@ -68,7 +68,7 @@ const Utilisateurs = () => {
     setShowDialog(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.matricule || !formData.prenom || !formData.nom || !formData.service) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
       return;
@@ -90,7 +90,7 @@ const Utilisateurs = () => {
         toast({ title: "Erreur", description: "Le mot de passe est requis pour un nouvel utilisateur.", variant: "destructive" });
         return;
       }
-      const result = createUser({
+      const result = await createUser({
         matricule: formData.matricule,
         prenom: formData.prenom,
         nom: formData.nom,
@@ -118,8 +118,8 @@ const Utilisateurs = () => {
     toast({ title: "Utilisateur supprimé", description: `${user.prenom} ${user.nom} a été supprimé.` });
   };
 
-  const handleToggleActive = (userId: string) => {
-    toggleUserActive(userId);
+  const handleToggleActive = async (userId: string) => {
+    await toggleUserActive(userId);
     const user = users.find((u) => u.id === userId);
     toast({ title: user?.isActive === false ? "Utilisateur activé" : "Utilisateur désactivé" });
   };

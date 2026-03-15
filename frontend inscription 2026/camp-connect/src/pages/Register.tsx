@@ -51,9 +51,8 @@ const Register = () => {
     }
 
     setIsLoading(true);
-
-    setTimeout(() => {
-      const result = registerParent({
+    try {
+      const result = await registerParent({
         matricule: formData.matricule,
         prenom: formData.prenom,
         nom: formData.nom,
@@ -61,16 +60,15 @@ const Register = () => {
         service: formData.service,
         password: formData.password,
       });
-
-      setIsLoading(false);
-
       if (result.ok) {
         toast({ title: "Compte créé", description: result.message });
         navigate("/login");
       } else {
         toast({ title: "Erreur", description: result.message, variant: "destructive" });
       }
-    }, 600);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

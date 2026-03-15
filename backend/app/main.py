@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -27,6 +28,19 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/", tags=["général"])
 def read_root():
@@ -45,6 +59,12 @@ def count_users(db: Session = Depends(get_db)):
     Retourne le nombre d'utilisateurs enregistrés dans la table users.
     """
     return {"count": db.query(User).count()}
+
+
+@app.get("/me", response_model=UserRead, tags=["auth"])
+def me(current_user: User = Depends(get_current_user)):
+    """Retourne l'utilisateur connecté."""
+    return current_user
 
 
 @app.post("/auth/login", response_model=Token, tags=["auth"])

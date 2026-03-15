@@ -53,11 +53,10 @@ const InscrireEnfant = () => {
     setShowConfirm(true);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setIsLoading(true);
-
-    setTimeout(() => {
-      const result = createInscription({
+    try {
+      const result = await createInscription({
         parentUserId: currentUser.id,
         parentMatricule: currentUser.matricule,
         parentPrenom: currentUser.prenom,
@@ -69,9 +68,6 @@ const InscrireEnfant = () => {
         childSex: childSex as "masculin" | "feminin",
         childRelation: childRelation as ParentRelation,
       });
-
-      setIsLoading(false);
-
       if (result.ok) {
         toast({ title: "✅ Inscription enregistrée", description: result.message });
         setLastResult({ ok: true, message: result.message, listType: result.inscription?.listType });
@@ -80,7 +76,9 @@ const InscrireEnfant = () => {
         setLastResult({ ok: false, message: result.message });
         setShowConfirm(false);
       }
-    }, 800);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const isTitulaire = !hasMain && childRelation !== "autre";
